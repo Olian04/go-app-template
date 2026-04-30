@@ -1,0 +1,19 @@
+ignoreGeneratedHeader = true
+severity = "warning"
+confidence = 0.8
+errorCode = 1
+warningCode = 1
+
+[rule.blank-imports]
+[rule.context-keys-type]
+[rule.error-return]
+[rule.error-strings]
+[rule.if-return]
+[rule.increment-decrement]
+[rule.range]
+[rule.receiver-naming]
+[rule.redefines-builtin-id]
+[rule.superfluous-else]
+[rule.unreachable-code]
+[rule.unused-parameter]
+[rule.var-declaration]
