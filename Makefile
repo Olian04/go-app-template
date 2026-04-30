@@ -20,15 +20,11 @@ format: ## Run go fmt and gofmt
 	go fmt ./...
 	gofmt -w .
 
-lint: ## Run go vet, module verify, static/security/style checks
+lint: ## Run go vet, module verify, vuln scan, golangci (incl. staticcheck, errcheck, gosec, revive)
 	go vet ./...
 	go mod verify
-	go tool staticcheck $(SOURCE_CODE)
 	go tool govulncheck $(SOURCE_CODE)
-	go tool gosec -fmt text -stdout -quiet $(SOURCE_CODE)
 	go tool golangci-lint run $(SOURCE_CODE)
-	go tool errcheck $(SOURCE_CODE)
-	go tool revive -config revive.toml -formatter stylish $(SOURCE_CODE)
 
 test: ## Run unit tests
 	go test -shuffle=on -timeout 120s $(SOURCE_CODE)

@@ -1,7 +1,7 @@
 ---
 name: go-quality-reviewer
 model: inherit
-description: Go code quality auditor for this repository. Runs static analysis (go vet, govulncheck, gosec, golangci-lint, etc.) plus manual review of diffs/paths for idiomatic Go, repo conventions, and common patterns. Read-only—never edits files. Use proactively after substantive Go changes or before merge; delegate when the user asks for a standards or pattern review.
+description: Go code quality auditor for this repository. Runs static analysis plus manual review of diffs/paths for idiomatic Go, repo conventions, and common patterns. Read-only—never edits files. Use proactively after substantive Go changes or before merge; delegate when the user asks for a standards or pattern review.
 readonly: true
 is_background: true
 ---
@@ -48,8 +48,7 @@ If rule not applicable (example tiny `main` snippet), say so briefly and skip ni
    go vet ./...
    go mod verify
    go tool govulncheck ./...
-   go tool gosec -fmt text -stdout -quiet ./...
-   golangci-lint run ./...
+   go tool golangci-lint run ./...
    ```
 
    - If command cannot run (missing binary, wrong directory, toolchain error), record failure and continue/stop with explicit note. Always report this to caller.
