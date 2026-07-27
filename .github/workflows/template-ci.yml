@@ -1,0 +1,82 @@
+name: Template CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  bootstrap-unit:
+    name: Bootstrap unit tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/bootstrap/go.mod
+          cache-dependency-path: tools/bootstrap/go.sum
+
+      - name: Test bootstrap module
+        run: go -C tools/bootstrap test ./...
+
+  bootstrap-matrix:
+    name: Bootstrap smoke (${{ matrix.mode }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - mode: cli
+            names: -cli-name=smokecli
+            build: "true"
+          - mode: library
+            names: -lib-name=smokelib
+            build: "false"
+          - mode: cli-library
+            names: -cli-name=smokecli -lib-name=smokelib
+            build: "true"
+          - mode: http
+            names: -service-name=smokeapp
+            build: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/bootstrap/go.mod
+          cache-dependency-path: tools/bootstrap/go.sum
+
+      - name: Smoke bootstrap → test/build
+        env:
+          MODE: ${{ matrix.mode }}
+          MATRIX_NAMES: ${{ matrix.names }}
+          MATRIX_BUILD: ${{ matrix.build }}
+          MODULE_PATH: example.com/smoke/${{ matrix.mode }}
+        run: |
+          set -euo pipefail
+          SMOKE_DIR=$(mktemp -d)
+          trap 'rm -rf "$SMOKE_DIR"' EXIT
+          rsync -a --exclude '.git' --exclude '.bootstrap-out' ./ "$SMOKE_DIR/"
+          cd "$SMOKE_DIR"
+          # shellcheck disable=SC2086
+          ./bootstrap.sh \
+            -noninteractive \
+            -mode="$MODE" \
+            -module-path="$MODULE_PATH" \
+            $MATRIX_NAMES
+          go test ./...
+          if [ "$MATRIX_BUILD" = "true" ]; then
+            go build ./...
+          fi

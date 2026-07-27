@@ -1,0 +1,272 @@
+package main
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"runtime"
+	"strings"
+
+	"github.com/Olian04/go-app-template/tools/bootstrap/render"
+)
+
+type selection struct {
+	Mode        render.Mode
+	ModulePath  string
+	GoVersion   string
+	CliName     string
+	ServiceName string
+	LibName     string
+}
+
+var (
+	reModulePath = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._\-/]*[A-Za-z0-9]$`)
+	reName       = regexp.MustCompile(`^[a-z][a-z0-9_-]*$`)
+)
+
+func parseMode(s string) (render.Mode, error) {
+	m := render.Mode(strings.TrimSpace(s))
+	switch m {
+	case render.ModeCLI, render.ModeLibrary, render.ModeCLILibrary, render.ModeHTTP:
+		return m, nil
+	case "":
+		return "", fmt.Errorf("mode required (cli|library|cli-library|http)")
+	default:
+		return "", fmt.Errorf("invalid mode %q (want cli|library|cli-library|http)", s)
+	}
+}
+
+func modeNeedsCLI(m render.Mode) bool {
+	return m == render.ModeCLI || m == render.ModeCLILibrary
+}
+
+func modeNeedsLibrary(m render.Mode) bool {
+	return m == render.ModeLibrary || m == render.ModeCLILibrary
+}
+
+func modeNeedsHTTP(m render.Mode) bool {
+	return m == render.ModeHTTP
+}
+
+func applyNameDefaults(sel *selection) {
+	base := moduleBasename(sel.ModulePath)
+	if modeNeedsCLI(sel.Mode) && sel.CliName == "" {
+		sel.CliName = base
+	}
+	if modeNeedsHTTP(sel.Mode) && sel.ServiceName == "" {
+		sel.ServiceName = base
+	}
+	if modeNeedsLibrary(sel.Mode) && sel.LibName == "" {
+		sel.LibName = base
+	}
+}
+
+func buildContext(sel selection) (render.Context, error) {
+	ctx := render.Context{
+		Mode:           sel.Mode,
+		ModulePath:     strings.TrimSpace(sel.ModulePath),
+		ModuleBasename: moduleBasename(sel.ModulePath),
+		GoVersion:      strings.TrimSpace(sel.GoVersion),
+		LibName:        strings.TrimSpace(sel.LibName),
+		CliName:        strings.TrimSpace(sel.CliName),
+		ServiceName:    strings.TrimSpace(sel.ServiceName),
+	}
+
+	switch sel.Mode {
+	case render.ModeHTTP:
+		ctx.Binaries = append(ctx.Binaries, binaryEntry(ctx.ModulePath, ctx.ServiceName))
+	case render.ModeCLI, render.ModeCLILibrary:
+		ctx.Binaries = append(ctx.Binaries, binaryEntry(ctx.ModulePath, ctx.CliName))
+	}
+	return ctx, nil
+}
+
+func binaryEntry(modulePath, name string) render.Binary {
+	mainPkg := modulePath + "/cmd/" + name
+	return render.Binary{
+		Name:           name,
+		MainPackage:    mainPkg,
+		VersionPackage: mainPkg + "/version",
+	}
+}
+
+func validateContext(ctx render.Context) error {
+	if ctx.Mode == "" {
+		return fmt.Errorf("mode required (cli|library|cli-library|http)")
+	}
+	if _, err := parseMode(string(ctx.Mode)); err != nil {
+		return err
+	}
+	if ctx.ModulePath == "" {
+		return fmt.Errorf("module path required (set --module-path or MODULE_PATH)")
+	}
+	if !reModulePath.MatchString(ctx.ModulePath) || strings.Contains(ctx.ModulePath, "//") {
+		return fmt.Errorf("invalid module path %q", ctx.ModulePath)
+	}
+	if ctx.GoVersion == "" {
+		return fmt.Errorf("go version required")
+	}
+	if modeNeedsCLI(ctx.Mode) {
+		if err := validateName("cli-name", ctx.CliName); err != nil {
+			return err
+		}
+	}
+	if modeNeedsHTTP(ctx.Mode) {
+		if err := validateName("service-name", ctx.ServiceName); err != nil {
+			return err
+		}
+	}
+	if modeNeedsLibrary(ctx.Mode) {
+		if err := validateName("lib-name", ctx.LibName); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateName(field, name string) error {
+	if name == "" {
+		return fmt.Errorf("%s required", field)
+	}
+	if !reName.MatchString(name) {
+		return fmt.Errorf("invalid %s %q (want lowercase [a-z][a-z0-9_-]*)", field, name)
+	}
+	return nil
+}
+
+func moduleBasename(modulePath string) string {
+	base := filepath.Base(strings.TrimSuffix(modulePath, "/"))
+	base = strings.TrimSuffix(base, ".git")
+	return strings.ToLower(base)
+}
+
+func defaultGoVersion() string {
+	if v := strings.TrimSpace(os.Getenv("GO_VERSION")); v != "" {
+		v = strings.TrimPrefix(v, "go")
+		parts := strings.Split(v, ".")
+		if len(parts) >= 2 {
+			return parts[0] + "." + parts[1]
+		}
+		return v
+	}
+	v := strings.TrimPrefix(runtime.Version(), "go")
+	parts := strings.Split(v, ".")
+	if len(parts) >= 2 {
+		return parts[0] + "." + parts[1]
+	}
+	return v
+}
+
+func envOr(key, fallback string) string {
+	if v := strings.TrimSpace(os.Getenv(key)); v != "" {
+		return v
+	}
+	return fallback
+}
+
+func envBool(key string) bool {
+	v := strings.TrimSpace(os.Getenv(key))
+	return v == "1" || strings.EqualFold(v, "true") || strings.EqualFold(v, "yes")
+}
+
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if strings.TrimSpace(v) != "" {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
+}
+
+func isInteractive() bool {
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return (fi.Mode() & os.ModeCharDevice) != 0
+}
+
+func findRepoRoot() (string, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	dir := wd
+	for {
+		templates := filepath.Join(dir, "templates")
+		bootstrap := filepath.Join(dir, "tools", "bootstrap")
+		if dirExists(templates) && dirExists(bootstrap) {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return "", fmt.Errorf("repo root not found from %s (need templates/ + tools/bootstrap/)", wd)
+}
+
+func dirExists(path string) bool {
+	fi, err := os.Stat(path)
+	return err == nil && fi.IsDir()
+}
+
+func defaultModulePath() (string, error) {
+	if v := strings.TrimSpace(os.Getenv("MODULE_PATH")); v != "" {
+		return v, nil
+	}
+	return remoteModulePath()
+}
+
+func remoteModulePath() (string, error) {
+	root, err := findRepoRoot()
+	if err != nil {
+		return "", err
+	}
+	raw, err := gitRemoteOrigin(root)
+	if err != nil {
+		return "", err
+	}
+	return normalizeRemoteURL(raw), nil
+}
+
+func gitRemoteOrigin(root string) (string, error) {
+	b, err := os.ReadFile(filepath.Join(root, ".git", "config"))
+	if err != nil {
+		return "", err
+	}
+	lines := strings.Split(string(b), "\n")
+	inOrigin := false
+	for _, line := range lines {
+		trim := strings.TrimSpace(line)
+		if strings.HasPrefix(trim, "[") {
+			inOrigin = trim == `[remote "origin"]`
+			continue
+		}
+		if inOrigin && strings.HasPrefix(trim, "url") {
+			parts := strings.SplitN(trim, "=", 2)
+			if len(parts) == 2 {
+				return strings.TrimSpace(parts[1]), nil
+			}
+		}
+	}
+	return "", fmt.Errorf("git remote origin not found")
+}
+
+func normalizeRemoteURL(remote string) string {
+	remote = strings.TrimSuffix(strings.TrimSpace(remote), ".git")
+	switch {
+	case strings.HasPrefix(remote, "git@"):
+		remote = strings.TrimPrefix(remote, "git@")
+		remote = strings.Replace(remote, ":", "/", 1)
+	case strings.HasPrefix(remote, "ssh://git@"):
+		remote = strings.TrimPrefix(remote, "ssh://git@")
+	case strings.HasPrefix(remote, "https://"):
+		remote = strings.TrimPrefix(remote, "https://")
+	case strings.HasPrefix(remote, "http://"):
+		remote = strings.TrimPrefix(remote, "http://")
+	}
+	return remote
+}
