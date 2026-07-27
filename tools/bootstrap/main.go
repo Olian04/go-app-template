@@ -29,7 +29,7 @@ func run(args []string) error {
 		goVersion      = fs.String("go-version", envOr("GO_VERSION", ""), "Go major.minor (default: runtime)")
 		cliName        = fs.String("cli-name", firstNonEmpty(envOr("CLI_NAME", ""), envOr("CMD_NAME", "")), "CLI binary/cmd name")
 		serviceName    = fs.String("service-name", envOr("SERVICE_NAME", ""), "HTTP service cmd name")
-		libName        = fs.String("lib-name", envOr("LIB_NAME", ""), "library package name")
+		libName        = fs.String("lib-name", envOr("LIB_NAME", ""), "library Go package name ([a-z][a-z0-9]*; no hyphens)")
 		outDir         = fs.String("out", envOr("BOOTSTRAP_OUT", ""), "staging output directory")
 		templatesDir   = fs.String("templates", envOr("BOOTSTRAP_TEMPLATES", ""), "templates directory")
 		noSwap         = fs.Bool("no-swap", false, "render to staging only; skip swap/tidy/wipe")

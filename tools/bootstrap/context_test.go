@@ -92,8 +92,40 @@ func TestApplyNameDefaults_fromBasename(t *testing.T) {
 	t.Parallel()
 	sel := selection{Mode: render.ModeCLILibrary, ModulePath: "github.com/acme/Cool-App"}
 	applyNameDefaults(&sel)
-	if sel.CliName != "cool-app" || sel.LibName != "cool-app" {
-		t.Fatalf("defaults: cli=%q lib=%q, want cool-app", sel.CliName, sel.LibName)
+	if sel.CliName != "cool-app" {
+		t.Fatalf("CliName=%q, want cool-app", sel.CliName)
+	}
+	if sel.LibName != "coolapp" {
+		t.Fatalf("LibName=%q, want coolapp (Go package name)", sel.LibName)
+	}
+}
+
+func TestGoPackageName(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		in, want string
+	}{
+		{"go-app-template", "goapptemplate"},
+		{"cool-app", "coolapp"},
+		{"alreadyok", "alreadyok"},
+		{"", "lib"},
+		{"123bad", "lib123bad"},
+		{"foo_bar", "foobar"},
+	}
+	for _, tc := range cases {
+		if got := goPackageName(tc.in); got != tc.want {
+			t.Fatalf("goPackageName(%q)=%q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+func TestValidatePackageName_rejectsHyphen(t *testing.T) {
+	t.Parallel()
+	if err := validatePackageName("lib-name", "go-app-template"); err == nil {
+		t.Fatal("expected error for hyphenated lib-name")
+	}
+	if err := validatePackageName("lib-name", "goapptemplate"); err != nil {
+		t.Fatalf("unexpected: %v", err)
 	}
 }
 

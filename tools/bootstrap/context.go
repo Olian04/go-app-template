@@ -21,8 +21,9 @@ type selection struct {
 }
 
 var (
-	reModulePath = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._\-/]*[A-Za-z0-9]$`)
-	reName       = regexp.MustCompile(`^[a-z][a-z0-9_-]*$`)
+	reModulePath  = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._\-/]*[A-Za-z0-9]$`)
+	reName        = regexp.MustCompile(`^[a-z][a-z0-9_-]*$`) // binary / dir names
+	rePackageName = regexp.MustCompile(`^[a-z][a-z0-9]*$`)   // Go package identifier
 )
 
 func parseMode(s string) (render.Mode, error) {
@@ -58,7 +59,7 @@ func applyNameDefaults(sel *selection) {
 		sel.ServiceName = base
 	}
 	if modeNeedsLibrary(sel.Mode) && sel.LibName == "" {
-		sel.LibName = base
+		sel.LibName = goPackageName(base)
 	}
 }
 
@@ -122,7 +123,7 @@ func validateContext(ctx render.Context) error {
 		}
 	}
 	if modeNeedsLibrary(ctx.Mode) {
-		if err := validateName("lib-name", ctx.LibName); err != nil {
+		if err := validatePackageName("lib-name", ctx.LibName); err != nil {
 			return err
 		}
 	}
@@ -139,10 +140,41 @@ func validateName(field, name string) error {
 	return nil
 }
 
+func validatePackageName(field, name string) error {
+	if name == "" {
+		return fmt.Errorf("%s required", field)
+	}
+	if !rePackageName.MatchString(name) {
+		return fmt.Errorf("invalid %s %q (want Go package name [a-z][a-z0-9]*; no hyphens)", field, name)
+	}
+	return nil
+}
+
 func moduleBasename(modulePath string) string {
 	base := filepath.Base(strings.TrimSuffix(modulePath, "/"))
 	base = strings.TrimSuffix(base, ".git")
 	return strings.ToLower(base)
+}
+
+// goPackageName maps a basename to a Go package identifier: lowercase [a-z][a-z0-9]*.
+// Hyphens/underscores/other punctuation are stripped (Go style: single-word names).
+func goPackageName(basename string) string {
+	basename = strings.ToLower(strings.TrimSpace(basename))
+	var b strings.Builder
+	b.Grow(len(basename))
+	for _, r := range basename {
+		if r >= 'a' && r <= 'z' || r >= '0' && r <= '9' {
+			b.WriteRune(r)
+		}
+	}
+	out := b.String()
+	if out == "" {
+		return "lib"
+	}
+	if out[0] < 'a' || out[0] > 'z' {
+		out = "lib" + out
+	}
+	return out
 }
 
 // prometheusMetricPrefix maps a module basename to a legacy Prometheus metric

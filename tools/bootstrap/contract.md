@@ -32,6 +32,12 @@ type Context struct {
     LibName, CliName, ServiceName string
     Binary *Binary // nil when mode has no binary (library)
 }
+
+// Naming:
+// - CliName / ServiceName: binary + cmd/ dir ([a-z][a-z0-9_-]*); hyphens OK
+// - LibName: Go package identifier ([a-z][a-z0-9]*); no hyphens/underscores
+//   (default from module basename strips punctuation: go-app-template → goapptemplate)
+
 ```
 
 Mode alone drives gates. No feature flags / `.Include.*`.

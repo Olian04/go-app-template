@@ -24,7 +24,7 @@
 //	    Mode Mode
 //	    ModulePath, ModuleBasename, GoVersion string
 //	    MetricPrefix string // Prometheus-safe form of ModuleBasename
-//	    LibName, CliName, ServiceName string
+//	    LibName, CliName, ServiceName string // LibName = Go package id [a-z][a-z0-9]*
 //	    Binary *Binary // nil when mode has no binary (library)
 //	}
 //
@@ -59,7 +59,7 @@ type Context struct {
 	ModuleBasename string
 	GoVersion      string
 	MetricPrefix   string // Prometheus-safe form of ModuleBasename (hyphens → _)
-	LibName        string
+	LibName        string // Go package identifier ([a-z][a-z0-9]*); no hyphens
 	CliName        string
 	ServiceName    string
 	Binary         *Binary // nil when mode has no binary (library)

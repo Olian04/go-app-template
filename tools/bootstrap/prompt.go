@@ -73,9 +73,9 @@ func promptInteractive(base selection) (selection, error) {
 	if modeNeedsLibrary(sel.Mode) {
 		def := sel.LibName
 		if def == "" {
-			def = baseName
+			def = goPackageName(baseName)
 		}
-		name, err := gumInput("Library package name", "e.g. mylib", def)
+		name, err := gumInput("Library Go package name", "e.g. mylib (no hyphens)", def)
 		if err != nil {
 			return sel, fmt.Errorf("lib name: %w", err)
 		}
