@@ -28,6 +28,7 @@ type Binary struct{ Name, MainPackage, VersionPackage string }
 type Context struct {
     Mode Mode
     ModulePath, ModuleBasename, GoVersion string
+    MetricPrefix string // Prometheus-safe form of ModuleBasename (hyphens → _)
     LibName, CliName, ServiceName string
     Binary *Binary // nil when mode has no binary (library)
 }

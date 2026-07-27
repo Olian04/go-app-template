@@ -2,4 +2,5 @@
 .bootstrap-out/
 dist/
 .smoke-results/
+.smoke-work/
 tools/bootstrap/.bootstrap-*

@@ -63,11 +63,13 @@ func applyNameDefaults(sel *selection) {
 }
 
 func buildContext(sel selection) (render.Context, error) {
+	base := moduleBasename(sel.ModulePath)
 	ctx := render.Context{
 		Mode:           sel.Mode,
 		ModulePath:     strings.TrimSpace(sel.ModulePath),
-		ModuleBasename: moduleBasename(sel.ModulePath),
+		ModuleBasename: base,
 		GoVersion:      strings.TrimSpace(sel.GoVersion),
+		MetricPrefix:   prometheusMetricPrefix(base),
 		LibName:        strings.TrimSpace(sel.LibName),
 		CliName:        strings.TrimSpace(sel.CliName),
 		ServiceName:    strings.TrimSpace(sel.ServiceName),
@@ -141,6 +143,34 @@ func moduleBasename(modulePath string) string {
 	base := filepath.Base(strings.TrimSuffix(modulePath, "/"))
 	base = strings.TrimSuffix(base, ".git")
 	return strings.ToLower(base)
+}
+
+// prometheusMetricPrefix maps a module basename to a legacy Prometheus metric
+// name prefix ([a-zA-Z_:][a-zA-Z0-9_:]*). Hyphens and other invalid runes become '_'.
+func prometheusMetricPrefix(basename string) string {
+	basename = strings.TrimSpace(basename)
+	if basename == "" {
+		return "app"
+	}
+	var b strings.Builder
+	b.Grow(len(basename))
+	for _, r := range basename {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '_', r == ':':
+			b.WriteRune(r)
+		default:
+			b.WriteByte('_')
+		}
+	}
+	out := b.String()
+	if out == "" {
+		return "app"
+	}
+	first := out[0]
+	if !((first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z') || first == '_' || first == ':') {
+		out = "app_" + out
+	}
+	return out
 }
 
 func defaultGoVersion() string {

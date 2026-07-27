@@ -5,7 +5,7 @@ const (
 	DefaultHTTPListenAddr = ":8080"
 [[ if modeIs "http" ]]
 	DefaultMetricsListenAddr = ":9090"
-	DefaultMetricPrefix      = "[[ .ModuleBasename ]]"
+	DefaultMetricPrefix      = "[[ .MetricPrefix ]]"
 [[ end ]]
 [[ if modeIs "cli" "cli-library" "http" ]]
 	DefaultLoggingLevel  = "info"

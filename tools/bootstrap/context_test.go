@@ -97,6 +97,42 @@ func TestApplyNameDefaults_fromBasename(t *testing.T) {
 	}
 }
 
+func TestPrometheusMetricPrefix(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		in, want string
+	}{
+		{"go-app-template", "go_app_template"},
+		{"cool-app", "cool_app"},
+		{"already_ok", "already_ok"},
+		{"", "app"},
+		{"123bad", "app_123bad"},
+		{"foo.bar", "foo_bar"},
+	}
+	for _, tc := range cases {
+		if got := prometheusMetricPrefix(tc.in); got != tc.want {
+			t.Fatalf("prometheusMetricPrefix(%q)=%q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+func TestBuildContext_metricPrefix(t *testing.T) {
+	t.Parallel()
+	ctx, err := buildContext(selection{
+		Mode: render.ModeHTTP, ModulePath: "github.com/Olian04/go-app-template",
+		GoVersion: "1.26", ServiceName: "go-app-template",
+	})
+	if err != nil {
+		t.Fatalf("buildContext: %v", err)
+	}
+	if ctx.ModuleBasename != "go-app-template" {
+		t.Fatalf("ModuleBasename=%q", ctx.ModuleBasename)
+	}
+	if ctx.MetricPrefix != "go_app_template" {
+		t.Fatalf("MetricPrefix=%q, want go_app_template", ctx.MetricPrefix)
+	}
+}
+
 func TestValidateContext_httpOK(t *testing.T) {
 	t.Parallel()
 	ctx := render.Context{
