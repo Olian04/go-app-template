@@ -12,10 +12,9 @@ before:
 
 [[ if modeIs "cli" "cli-library" "http" ]]
 builds:
-[[ range .Binaries ]]
-  - id: [[ .Name ]]
-    main: [[ .MainPackage ]]
-    binary: [[ .Name ]]
+  - id: [[ .Binary.Name ]]
+    main: [[ .Binary.MainPackage ]]
+    binary: [[ .Binary.Name ]]
     dir: .
     flags:
       - -trimpath
@@ -31,31 +30,26 @@ builds:
     ldflags:
       - -s
       - -w
-      - -X [[ $.ModulePath ]]/[[ .VersionPackage ]].Version={{ .Tag }}
-      - -X [[ $.ModulePath ]]/[[ .VersionPackage ]].Revision={{ .Commit }}
-      - -X [[ $.ModulePath ]]/[[ .VersionPackage ]].BuildTime={{ .Env.APP_BUILD_TIME }}
-[[ end ]]
+      - -X [[ .Binary.VersionPackage ]].Version={{ .Tag }}
+      - -X [[ .Binary.VersionPackage ]].Revision={{ .Commit }}
+      - -X [[ .Binary.VersionPackage ]].BuildTime={{ .Env.APP_BUILD_TIME }}
 
 archives:
-[[ range .Binaries ]]
-  - id: [[ .Name ]]
+  - id: [[ .Binary.Name ]]
     formats: [binary]
     name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
     ids:
-      - [[ .Name ]]
-[[ end ]]
+      - [[ .Binary.Name ]]
 
 checksum:
   name_template: checksums.txt
 
 sboms:
-[[ range .Binaries ]]
-  - id: [[ .Name ]]
+  - id: [[ .Binary.Name ]]
     artifacts: binary
     ids:
-      - [[ .Name ]]
+      - [[ .Binary.Name ]]
     disable: false
-[[ end ]]
 [[ else if modeIs "library" ]]
 builds:
   - id: noop
@@ -102,6 +96,7 @@ release:
     {{ .Env.RELEASE_BODY }}
 
   footer: |
+[[ if modeIs "cli" "cli-library" "http" ]]
     ## Downloads
 
     | Asset | Description |
@@ -118,6 +113,7 @@ release:
 
     On Windows, verify the printed SHA256 against the file from `checksums.txt` using your preferred tool.
 
+[[ end ]]
 [[ if modeIs "http" ]]
     {{ if .Env.REGISTRY_IMAGE }}## Container image
 
@@ -128,6 +124,33 @@ release:
     ```
     {{ end }}
 [[ end ]]
+[[ if modeIs "library" "cli-library" ]]
+    ## Use as a Go module
+
+    ```bash
+    go get [[ .ModulePath ]]@{{ .Tag }}
+    ```
+
+    Import from `[[ .ModulePath ]]/pkg/[[ .LibName ]]`.
+
+[[ end ]]
+[[ if modeIs "cli" "cli-library" ]]
+    ## Install CLI
+
+    As a Go tool:
+
+    ```bash
+    go get -tool [[ .ModulePath ]]/cmd/[[ .CliName ]]@{{ .Tag }}
+    ```
+
+    Or install globally:
+
+    ```bash
+    go install [[ .ModulePath ]]/cmd/[[ .CliName ]]@{{ .Tag }}
+    ```
+
+[[ end ]]
+[[ if modeIs "cli" "cli-library" "http" ]]
     ## macOS Gatekeeper
 
     If macOS shows a Gatekeeper warning (“Apple could not verify…”):
@@ -139,3 +162,4 @@ release:
     # Intel (amd64)
     xattr -d com.apple.quarantine [[ .ModuleBasename ]]-darwin-amd64
     ```
+[[ end ]]

@@ -75,9 +75,11 @@ func buildContext(sel selection) (render.Context, error) {
 
 	switch sel.Mode {
 	case render.ModeHTTP:
-		ctx.Binaries = append(ctx.Binaries, binaryEntry(ctx.ModulePath, ctx.ServiceName))
+		b := binaryEntry(ctx.ModulePath, ctx.ServiceName)
+		ctx.Binary = &b
 	case render.ModeCLI, render.ModeCLILibrary:
-		ctx.Binaries = append(ctx.Binaries, binaryEntry(ctx.ModulePath, ctx.CliName))
+		b := binaryEntry(ctx.ModulePath, ctx.CliName)
+		ctx.Binary = &b
 	}
 	return ctx, nil
 }

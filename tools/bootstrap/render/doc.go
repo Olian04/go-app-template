@@ -24,7 +24,7 @@
 //	    Mode Mode
 //	    ModulePath, ModuleBasename, GoVersion string
 //	    LibName, CliName, ServiceName string
-//	    Binaries []Binary
+//	    Binary *Binary // nil when mode has no binary (library)
 //	}
 //
 //	// File runs gate+normal pipeline for one file; skip => skipped=true.
@@ -60,5 +60,5 @@ type Context struct {
 	LibName        string
 	CliName        string
 	ServiceName    string
-	Binaries       []Binary
+	Binary         *Binary // nil when mode has no binary (library)
 }

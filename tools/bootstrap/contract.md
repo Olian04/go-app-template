@@ -29,11 +29,11 @@ type Context struct {
     Mode Mode
     ModulePath, ModuleBasename, GoVersion string
     LibName, CliName, ServiceName string
-    Binaries []Binary
+    Binary *Binary // nil when mode has no binary (library)
 }
 ```
 
-**No** `IncludeFlags`. **No** `.Include.*` anywhere after migration.
+Mode alone drives gates. No feature flags / `.Include.*`.
 
 ## Gate dialect
 

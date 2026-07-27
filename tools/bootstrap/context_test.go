@@ -24,28 +24,26 @@ func TestParseMode(t *testing.T) {
 	}
 }
 
-func TestBuildContext_binariesByMode(t *testing.T) {
+func TestBuildContext_binaryByMode(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name    string
 		sel     selection
-		wantLen int
-		wantBin string
+		wantBin string // empty => Binary nil
 	}{
 		{
 			name: "cli",
 			sel: selection{
 				Mode: render.ModeCLI, ModulePath: "example.com/app", GoVersion: "1.26", CliName: "app",
 			},
-			wantLen: 1, wantBin: "app",
+			wantBin: "app",
 		},
 		{
 			name: "library",
 			sel: selection{
 				Mode: render.ModeLibrary, ModulePath: "example.com/app", GoVersion: "1.26", LibName: "app",
 			},
-			wantLen: 0,
 		},
 		{
 			name: "cli-library",
@@ -53,14 +51,14 @@ func TestBuildContext_binariesByMode(t *testing.T) {
 				Mode: render.ModeCLILibrary, ModulePath: "example.com/app", GoVersion: "1.26",
 				CliName: "app", LibName: "app",
 			},
-			wantLen: 1, wantBin: "app",
+			wantBin: "app",
 		},
 		{
 			name: "http",
 			sel: selection{
 				Mode: render.ModeHTTP, ModulePath: "example.com/app", GoVersion: "1.26", ServiceName: "appsvc",
 			},
-			wantLen: 1, wantBin: "appsvc",
+			wantBin: "appsvc",
 		},
 	}
 
@@ -74,11 +72,17 @@ func TestBuildContext_binariesByMode(t *testing.T) {
 			if ctx.Mode != tc.sel.Mode {
 				t.Fatalf("Mode=%q, want %q", ctx.Mode, tc.sel.Mode)
 			}
-			if len(ctx.Binaries) != tc.wantLen {
-				t.Fatalf("Binaries len=%d, want %d (%+v)", len(ctx.Binaries), tc.wantLen, ctx.Binaries)
+			if tc.wantBin == "" {
+				if ctx.Binary != nil {
+					t.Fatalf("Binary=%+v, want nil", ctx.Binary)
+				}
+				return
 			}
-			if tc.wantLen == 1 && ctx.Binaries[0].Name != tc.wantBin {
-				t.Fatalf("Binary.Name=%q, want %q", ctx.Binaries[0].Name, tc.wantBin)
+			if ctx.Binary == nil {
+				t.Fatal("Binary=nil, want set")
+			}
+			if ctx.Binary.Name != tc.wantBin {
+				t.Fatalf("Binary.Name=%q, want %q", ctx.Binary.Name, tc.wantBin)
 			}
 		})
 	}

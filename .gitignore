@@ -1,3 +1,5 @@
 .DS_Store
 .bootstrap-out/
 dist/
+.smoke-results/
+tools/bootstrap/.bootstrap-*

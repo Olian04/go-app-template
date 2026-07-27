@@ -61,10 +61,7 @@ func splitFirstLine(src []byte) (line1 string, rest []byte, hasNL bool) {
 	if i < 0 {
 		return string(src), nil, false
 	}
-	line := string(src[:i])
-	if strings.HasSuffix(line, "\r") {
-		line = strings.TrimSuffix(line, "\r")
-	}
+	line := strings.TrimSuffix(string(src[:i]), "\r")
 	return line, src[i+1:], true
 }
 
@@ -198,7 +195,7 @@ func evalGateAction(path, inner string, mode Mode) (gated bool, include bool, er
 	}
 	// Authors must nest: when (modeIs …). No rewrite of bare when modeIs.
 	src := "[[" + inner + "]]"
-	tmpl, err := template.New("gate:" + path).Delims("[[", "]]").Funcs(funcs).Parse(src)
+	tmpl, err := template.New("gate:"+path).Delims("[[", "]]").Funcs(funcs).Parse(src)
 	if err != nil {
 		return false, false, fmt.Errorf("render gate %s: %w", path, err)
 	}
@@ -220,7 +217,7 @@ func renderNormal(path string, body []byte, ctx Context) ([]byte, error) {
 	funcs := template.FuncMap{
 		"modeIs": modeIsHelper(ctx.Mode),
 	}
-	tmpl, err := template.New("file:" + path).Delims("[[", "]]").Funcs(funcs).Parse(string(body))
+	tmpl, err := template.New("file:"+path).Delims("[[", "]]").Funcs(funcs).Parse(string(body))
 	if err != nil {
 		return nil, fmt.Errorf("render %s: %w", path, err)
 	}

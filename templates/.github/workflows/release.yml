@@ -134,14 +134,3 @@ jobs:
           REGISTRY_IMAGE: ${{ env.REGISTRY_IMAGE }}
           PUSH_LATEST: ${{ env.PUSH_LATEST }}
 [[ end ]]
-
-      - name: Job summary (GoReleaser)
-        if: always()
-        run: |
-          {
-            echo "## Release job ([[ .ModuleBasename ]])"
-            echo ""
-            echo "- **GoReleaser**: trimpath builds, Syft SBOMs, git changelog[[ if modeIs "http" ]], GHCR image (\`dockers_v2\` + image SBOM)[[ end ]], \`checksums.txt\`, GitHub Release."
-            echo ""
-            echo "Inspect **Run GoReleaser** in the Actions UI for build[[ if modeIs "http" ]] and Docker[[ end ]] timing."
-          } >> "$GITHUB_STEP_SUMMARY"
