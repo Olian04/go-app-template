@@ -31,7 +31,9 @@ internal/config/labels.go
 internal/config/load.go
 internal/config/logging.go
 internal/config/yaml.go
+internal/domain/echo/service.go
 internal/observability/logging/context.go
 internal/observability/logging/logging.go
 test/unit/config/config_test.go
+test/unit/domain/echo/service_test.go
 test/unit/observability/logging/context_test.go

@@ -2,18 +2,22 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"maps"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/urfave/cli/v3"
 
 	"[[.ModulePath]]/cmd/[[.CliName]]/version"
 	"[[.ModulePath]]/internal/config"
+	"[[.ModulePath]]/internal/domain/echo"
 	"[[.ModulePath]]/internal/observability/logging"
 )
 
@@ -23,9 +27,10 @@ func main() {
 	cli.VersionPrinter = printVersion(vi)
 
 	root := &cli.Command{
-		Name:    "[[.CliName]]",
-		Usage:   "[[.CliName]] CLI",
-		Version: vi.Version,
+		Name:      "[[.CliName]]",
+		Usage:     "Echo a message through the domain model",
+		ArgsUsage: "[message...]  (reads stdin when no arguments are given)",
+		Version:   vi.Version,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "config",
@@ -75,10 +80,34 @@ func runCLI(ctx context.Context, c *cli.Command) error {
 	}
 	defer cleanup()
 
-	// Replace with real work; ctx carries cancellation from SIGINT/SIGTERM.
-	logging.FromContext(ctx).Info("[[.CliName]] ran", "version", version.Info().Version)
-	_, err = fmt.Fprintf(c.Root().Writer, "%s %s\n", c.Name, version.Info().Version)
+	// This is the CLI's IO adapter: read args or stdin, hand the value to the
+	// same domain the other modes use, write the result to stdout.
+	message, err := readMessage(c)
+	if err != nil {
+		return err
+	}
+
+	res := echo.NewService().Echo(echo.Request{Message: message})
+
+	logging.FromContext(ctx).Info("echoed message", "bytes_in", len(message), "bytes_out", len(res.Message))
+	_, err = fmt.Fprintln(c.Root().Writer, res.Message)
 	return err
+}
+
+// readMessage joins positional args, falling back to stdin so the command
+// composes in a pipeline.
+//
+// Note: urfave/cli trims surrounding whitespace from positional args, so the
+// domain's own trimming is only observable on the stdin path.
+func readMessage(c *cli.Command) (string, error) {
+	if c.Args().Len() > 0 {
+		return strings.Join(c.Args().Slice(), " "), nil
+	}
+	data, err := io.ReadAll(bufio.NewReader(c.Root().Reader))
+	if err != nil {
+		return "", fmt.Errorf("read stdin: %w", err)
+	}
+	return string(data), nil
 }
 
 func printVersion(vi version.VersionInfo) func(cmd *cli.Command) {

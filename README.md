@@ -14,19 +14,24 @@ In-place Go project template. After you use this repository as a GitHub template
 Mode is the **only** switch: it decides which files render and which features exist.
 There are no runtime feature flags.
 
+Every mode ships the same demo domain model (`internal/domain/echo`) and differs only
+in the IO wrapped around it — a CLI command, an HTTP handler, or an exported library
+facade. That shows where your own logic goes and what changes when the mode does.
+
 ### What each mode enables
 
 | Feature | `cli` | `library` | `cli-library` | `http` |
 | --- | :-: | :-: | :-: | :-: |
-| CLI binary (`cmd/<cli-name>/`) | ✓ | – | ✓ | – |
-| HTTP service binary (`cmd/<service-name>/`) | – | – | – | ✓ |
-| Public library package (`pkg/<lib-name>/`) | – | ✓ | ✓ | – |
+| Demo domain model (`internal/domain/echo/`) | ✓ | ✓ | ✓ | ✓ |
+| CLI binary (`cmd/<cli-name>/`) — args/stdin → domain → stdout | ✓ | – | ✓ | – |
+| HTTP service binary (`cmd/<service-name>/`) — request → domain → JSON | – | – | – | ✓ |
+| Public library package (`pkg/<lib-name>/`) — exported facade over domain | – | ✓ | ✓ | – |
 | Layered config: `labels`, `logging` (`internal/config/`) | ✓ | – | ✓ | ✓ |
 | Config `http` section — timeouts, body/header limits | – | – | – | ✓ |
 | Config `metrics` section | – | – | – | ✓ |
 | slog setup (`internal/observability/logging/`) | ✓ | – | ✓ | ✓ |
 | Correlation-ID context helpers (`logging.FromContext`) | ✓ | – | ✓ | ✓ |
-| Domain + HTTP transport (`internal/domain/`, `internal/transport/`) | – | – | – | ✓ |
+| HTTP transport + composition root (`internal/transport/`, `internal/app/`) | – | – | – | ✓ |
 | Middleware chain: recover, request ID, logging, metrics | – | – | – | ✓ |
 | `X-Request-ID` propagation on requests/responses | – | – | – | ✓ |
 | Prometheus registry + `/metrics` listener | – | – | – | ✓ |

@@ -8,7 +8,14 @@ import "time"
 const (
 	DefaultLoggingLevel  = "info"
 	DefaultLoggingFormat = "json"
+[[ if modeIs "http" ]]
+	// A service's logs are its primary output, so stdout is the conventional sink.
 	DefaultLoggingStream = "stdout"
+[[ else ]]
+	// A CLI's stdout is its data channel: keep logs on stderr so results stay
+	// pipeable. Override with logging.stream or APP_LOGGING_STREAM.
+	DefaultLoggingStream = "stderr"
+[[ end ]]
 )
 [[ if modeIs "http" ]]
 

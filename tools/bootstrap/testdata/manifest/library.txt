@@ -19,5 +19,7 @@ README.md
 docs/AGENTS.md
 go.mod
 goreleaser/.goreleaser.yaml
-pkg/applib/greet.go
-test/unit/pkg/applib/greet_test.go
+internal/domain/echo/service.go
+pkg/applib/echo.go
+test/unit/domain/echo/service_test.go
+test/unit/pkg/applib/echo_test.go

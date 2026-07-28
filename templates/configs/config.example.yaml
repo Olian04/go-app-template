@@ -32,4 +32,9 @@ metrics:
 logging:
   level: 'info'
   format: 'json'
+[[- if modeIs "http" ]]
   stream: 'stdout'
+[[- else ]]
+  # stderr keeps stdout free for command output so results stay pipeable.
+  stream: 'stderr'
+[[- end ]]

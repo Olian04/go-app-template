@@ -1,7 +1,8 @@
 .PHONY: [[ if .Binary ]] build run [[ end ]] format lint test test-race help
 
-# Only list trees this mode actually renders: a missing path fails the whole target.
-SOURCE_CODE ?=[[ if modeIs "cli" "cli-library" "http" ]] ./internal/...[[ end ]] ./test/unit/...[[- if modeIs "cli" "cli-library" "http" ]] ./cmd/...[[- end ]][[- if modeIs "library" "cli-library" ]] ./pkg/...[[- end ]]
+# Only list trees this mode actually renders: a missing path fails the whole
+# target. `internal/` is unconditional because the domain model ships in every mode.
+SOURCE_CODE ?= ./internal/... ./test/unit/...[[- if modeIs "cli" "cli-library" "http" ]] ./cmd/...[[- end ]][[- if modeIs "library" "cli-library" ]] ./pkg/...[[- end ]]
 REV := $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
 BUILD_TIME := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 BUILD_OUTPUT_DIR := ./dist

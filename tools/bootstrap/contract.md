@@ -82,9 +82,10 @@ On false: skip file. No merge. Prune empty dirs after Tree.
 
 | Files                                    | Gate / body                                               |
 | ---------------------------------------- | --------------------------------------------------------- |
+| Domain model + its tests                 | ungated (all modes) — the shared demo every adapter wraps  |
 | CLI cmd                                  | `when (modeIs "cli" "cli-library")`                         |
-| Library pkg                              | `when (modeIs "library" "cli-library")`                     |
-| HTTP cmd/app/domain/transport/middleware | `when (modeIs "http")`                                      |
+| Library pkg (facade over domain)         | `when (modeIs "library" "cli-library")`                     |
+| HTTP cmd/app/transport/middleware        | `when (modeIs "http")`                                      |
 | Config root + logging + labels + yaml    | `when (modeIs "cli" "cli-library" "http")`                  |
 | Logging correlation-id helpers           | `when (modeIs "cli" "cli-library" "http")`                  |
 | Config `http` section (timeouts, limits) | `when (modeIs "http")`                                      |

@@ -100,6 +100,12 @@ jobs:
             -mode="$MODE" -module-path="$MODULE_PATH" $MATRIX_NAMES
           cd .bootstrap-out
 
+          # The domain is the constant every mode adapts to.
+          test -f internal/domain/echo/service.go \
+            || { echo "::error::$MODE mode missing the shared domain model"; exit 1; }
+          test -f test/unit/domain/echo/service_test.go \
+            || { echo "::error::$MODE mode missing the domain tests"; exit 1; }
+
           # Cheap backstop beside the golden manifests in tools/bootstrap:
           # HTTP-only surface must never leak into a mode with no server.
           if [ "$MODE" = "http" ]; then

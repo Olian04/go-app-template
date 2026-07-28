@@ -6,18 +6,18 @@ App template — use with repo `README.md`[[ if modeIs "cli" "cli-library" "http
 
 | Path | Role |
 | --- | --- |
+| `internal/domain/echo` | Domain logic only. Identical in every mode; no IO imports. |
 [[ if modeIs "http" ]]
 | `cmd/[[ .ServiceName ]]` | Entry: load config, `logging.Setup`, signal context, `app.Run`. |
 | `internal/app` | Wire registry + router; own every listener's timeouts and shutdown. |
-| `internal/domain/echo` | Domain logic only. |
-| `internal/transport/http` | Routes + middleware chain (recover, request ID, logging, metrics). |
+| `internal/transport/http` | HTTP adapter over the domain + middleware chain (recover, request ID, logging, metrics). |
 | `internal/transport/metricshttp` | `/metrics` handler (no lifecycle — `internal/app` runs it). |
 [[ end ]]
 [[ if modeIs "cli" "cli-library" ]]
-| `cmd/[[ .CliName ]]` | CLI entrypoint. |
+| `cmd/[[ .CliName ]]` | CLI adapter over the domain: args/stdin in, stdout out. |
 [[ end ]]
 [[ if modeIs "library" "cli-library" ]]
-| `pkg/[[ .LibName ]]` | Public library API. |
+| `pkg/[[ .LibName ]]` | Public API: exported facade delegating to the domain. |
 [[ end ]]
 [[ if modeIs "cli" "cli-library" "http" ]]
 | `internal/config` | Root config `Load`; section structs (defaults/`WithDefaults`/`Validate`). |
@@ -30,14 +30,19 @@ App template — use with repo `README.md`[[ if modeIs "cli" "cli-library" "http
 | `test/unit/...` | Unit tests beside mirrored paths. |
 
 ## Dependency direction
+
+`internal/domain` is the fixed point. Mode-specific IO adapters depend on it; it
+depends on nothing but the standard library. Put behaviour in the domain and
+keep adapters to translation only.
 [[ if modeIs "library" ]]
-`pkg/[[ .LibName ]]` is the entire public surface; standard library only, no side effects on import.
+`pkg/[[ .LibName ]]` → `internal/domain/echo`. The facade is the public surface
+(consumers cannot import `internal/`); no side effects on import.
 [[ else if modeIs "http" ]]
 `cmd` → `internal/app` → domain, transport, observability, aggregated `internal/config`.
 Domain must not import app, transports, observability.
 [[ else ]]
-`cmd` → [[ if modeIs "cli-library" ]]`pkg/[[ .LibName ]]`, [[ end ]]observability, aggregated `internal/config`.
-There is no `internal/app` or `internal/domain` in this mode; `cmd` is the composition root.
+`cmd` → `internal/domain/echo`[[ if modeIs "cli-library" ]], `pkg/[[ .LibName ]]`[[ end ]], observability, aggregated `internal/config`.
+There is no `internal/app` in this mode; `cmd` is the composition root.
 [[ end ]]
 
 [[ if modeIs "cli" "cli-library" "http" ]]

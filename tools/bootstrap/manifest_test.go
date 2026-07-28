@@ -108,6 +108,18 @@ func TestModeManifestGatingInvariants(t *testing.T) {
 			present: []render.Mode{render.ModeCLI, render.ModeCLILibrary, render.ModeHTTP},
 		},
 		{
+			// The domain is the fixed point every mode adapts to; only the IO
+			// around it is mode-specific.
+			path:    "internal/domain/echo/service.go",
+			reason:  "the demo domain model ships in every mode",
+			present: []render.Mode{render.ModeCLI, render.ModeLibrary, render.ModeCLILibrary, render.ModeHTTP},
+		},
+		{
+			path:    "test/unit/domain/echo/service_test.go",
+			reason:  "domain tests ship wherever the domain does",
+			present: []render.Mode{render.ModeCLI, render.ModeLibrary, render.ModeCLILibrary, render.ModeHTTP},
+		},
+		{
 			path:    "internal/observability/logging/context.go",
 			reason:  "correlation-id helpers ship with logging in every binary mode",
 			present: []render.Mode{render.ModeCLI, render.ModeCLILibrary, render.ModeHTTP},
@@ -123,8 +135,8 @@ func TestModeManifestGatingInvariants(t *testing.T) {
 			present: []render.Mode{render.ModeHTTP},
 		},
 		{
-			path:    "pkg/applib/greet.go",
-			reason:  "public package belongs to the library modes",
+			path:    "pkg/applib/echo.go",
+			reason:  "the public facade over the domain belongs to the library modes",
 			present: []render.Mode{render.ModeLibrary, render.ModeCLILibrary},
 		},
 		{
