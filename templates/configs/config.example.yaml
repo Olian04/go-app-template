@@ -1,16 +1,25 @@
 # [[ when (modeIs "cli" "cli-library" "http") ]]
 # Example YAML config. Load precedence when multiple sources enabled: YAML → ENV → flags.
-[[ if modeIs "http" ]]
+[[- if modeIs "http" ]]
 # `labels` keys must be valid Prometheus label names (legacy ASCII rules).
 # See https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
-[[ end ]]
+[[- end ]]
 labels:
   service: '[[ .ModuleBasename ]]'
   env: 'local'
+[[- if modeIs "http" ]]
 
 http:
   listen_addr: ':8080'
-[[ if modeIs "http" ]]
+  # Timeouts and size limits bound per-connection resource use. Go duration strings.
+  read_timeout: '15s'
+  read_header_timeout: '5s'
+  write_timeout: '15s'
+  idle_timeout: '60s'
+  # Grace period for in-flight requests to drain on SIGINT/SIGTERM.
+  shutdown_timeout: '10s'
+  max_header_bytes: 1048576
+  max_body_bytes: 1048576
 
 metrics:
   enabled: true
@@ -18,11 +27,14 @@ metrics:
   # Prometheus namespace; series look like `{prefix}_http_requests_total`.
   # Must be a legacy Prometheus metric name prefix (hyphens from the module basename become underscores).
   metric_prefix: '[[ .MetricPrefix ]]'
-[[ end ]]
-[[ if modeIs "cli" "cli-library" "http" ]]
+[[- end ]]
 
 logging:
   level: 'info'
   format: 'json'
+[[- if modeIs "http" ]]
   stream: 'stdout'
-[[ end ]]
+[[- else ]]
+  # stderr keeps stdout free for command output so results stay pipeable.
+  stream: 'stderr'
+[[- end ]]

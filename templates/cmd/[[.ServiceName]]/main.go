@@ -5,9 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-[[ if modeIs "cli" "cli-library" "http" ]]
 	"maps"
-[[ end ]]
 	"os"
 	"os/signal"
 	"syscall"
@@ -17,9 +15,7 @@ import (
 	"[[.ModulePath]]/cmd/[[.ServiceName]]/version"
 	"[[.ModulePath]]/internal/app"
 	"[[.ModulePath]]/internal/config"
-[[ if modeIs "cli" "cli-library" "http" ]]
 	"[[.ModulePath]]/internal/observability/logging"
-[[ end ]]
 )
 
 func main() {
@@ -32,38 +28,37 @@ func main() {
 		Usage:   "Echo service",
 		Version: vi.Version,
 		Flags: []cli.Flag{
-[[ if modeIs "cli" "cli-library" "http" ]]
 			&cli.StringFlag{
 				Name:    "config",
 				Aliases: []string{"c"},
 				Usage:   "path to YAML config file",
 				Sources: cli.EnvVars("APP_CONFIG_FILE"),
 			},
-[[ end ]]
 		},
 		Action: runCLI,
 	}
 
+	// SIGINT/SIGTERM cancel ctx; app.Run drains its listeners and returns, so the
+	// deferred logging cleanup in runCLI still executes on signal.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	if err := root.Run(ctx, os.Args); err != nil {
-		slog.Error("[[.ServiceName]] exited with error", "error_message", err)
+		// Written straight to stderr, not slog: runCLI's deferred cleanup has
+		// already torn the configured logger down by the time Run returns.
+		fmt.Fprintf(os.Stderr, "[[.ServiceName]]: %v\n", err)
 		os.Exit(1)
 	}
 }
 
 func runCLI(ctx context.Context, c *cli.Command) error {
 	cfg, err := config.Load(config.Options{
-[[ if modeIs "cli" "cli-library" "http" ]]
 		Path: c.String("config"),
-[[ end ]]
 	})
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-[[ if modeIs "cli" "cli-library" "http" ]]
 	logLabels := maps.Clone(map[string]string(cfg.Labels))
 	if logLabels == nil {
 		logLabels = make(map[string]string, 1)
@@ -77,11 +72,9 @@ func runCLI(ctx context.Context, c *cli.Command) error {
 		logging.WithLabels(logLabels),
 	)
 	if err != nil {
-		slog.Error("setup logging", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("setup logging: %w", err)
 	}
 	defer cleanup()
-[[ end ]]
 
 	return app.Run(ctx, cfg)
 }

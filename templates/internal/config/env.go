@@ -14,22 +14,24 @@ import (
 
 // ENV keys (applied after YAML, before flags):
 //
-//	APP_HTTP_LISTEN_ADDR
 [[ if modeIs "http" ]]
+//	APP_HTTP_LISTEN_ADDR
 //	APP_METRICS_ENABLED
 //	APP_METRICS_LISTEN_ADDR
 //	APP_METRICS_METRIC_PREFIX
 [[ end ]]
-[[ if modeIs "cli" "cli-library" "http" ]]
 //	APP_LOGGING_LEVEL
 //	APP_LOGGING_FORMAT
 //	APP_LOGGING_STREAM
+[[ if modeIs "http" ]]
+//
+// HTTP timeouts and size limits are YAML/flag-only; see HTTPSection.
 [[ end ]]
 func applyEnv(cfg *Config) error {
+[[ if modeIs "http" ]]
 	if v, ok := lookupEnv("APP_HTTP_LISTEN_ADDR"); ok {
 		cfg.HTTP.ListenAddr = v
 	}
-[[ if modeIs "http" ]]
 	if v, ok := lookupEnv("APP_METRICS_LISTEN_ADDR"); ok {
 		cfg.Metrics.ListenAddr = v
 	}
@@ -44,7 +46,6 @@ func applyEnv(cfg *Config) error {
 		cfg.Metrics.Enabled = &b
 	}
 [[ end ]]
-[[ if modeIs "cli" "cli-library" "http" ]]
 	if v, ok := lookupEnv("APP_LOGGING_LEVEL"); ok {
 		cfg.Logging.Level = v
 	}
@@ -54,7 +55,6 @@ func applyEnv(cfg *Config) error {
 	if v, ok := lookupEnv("APP_LOGGING_STREAM"); ok {
 		cfg.Logging.Stream = v
 	}
-[[ end ]]
 	return nil
 }
 

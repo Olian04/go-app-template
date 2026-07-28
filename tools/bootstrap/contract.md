@@ -80,17 +80,48 @@ On false: skip file. No merge. Prune empty dirs after Tree.
 
 ### Mode cheat sheet for templates
 
-| Files                    | Gate / body                                               |
-| ------------------------ | --------------------------------------------------------- |
-| CLI cmd                  | `when (modeIs "cli" "cli-library")`                         |
-| Library pkg              | `when (modeIs "library" "cli-library")`                     |
-| HTTP cmd/app/domain/http | `when (modeIs "http")`                                      |
-| Config + logging         | `when (modeIs "cli" "cli-library" "http")`                  |
-| Metrics + metricshttp    | `when (modeIs "http")`                                      |
-| Release docker bits      | body/`[[ if modeIs "http" ]]`                             |
-| Release library bits     | `when (modeIs "library" "cli-library")`                     |
-| Release binary bits      | `when (modeIs "cli" "cli-library" "http")`                  |
-| CI / AiRules             | ungated (always) **or** all four modes—**prefer ungated** |
+| Files                                    | Gate / body                                               |
+| ---------------------------------------- | --------------------------------------------------------- |
+| Domain model + its tests                 | ungated (all modes) — the shared demo every adapter wraps  |
+| CLI cmd                                  | `when (modeIs "cli" "cli-library")`                         |
+| Library pkg (facade over domain)         | `when (modeIs "library" "cli-library")`                     |
+| HTTP cmd/app/transport/middleware        | `when (modeIs "http")`                                      |
+| Config root + logging + labels + yaml    | `when (modeIs "cli" "cli-library" "http")`                  |
+| Logging correlation-id helpers           | `when (modeIs "cli" "cli-library" "http")`                  |
+| Config `http` section (timeouts, limits) | `when (modeIs "http")`                                      |
+| Metrics config + registry + metricshttp  | `when (modeIs "http")`                                      |
+| Release docker bits                      | body/`[[ if modeIs "http" ]]`                             |
+| Release library bits                     | `when (modeIs "library" "cli-library")`                     |
+| Release binary bits                      | `when (modeIs "cli" "cli-library" "http")`                  |
+| CI / AiRules                             | ungated (always) **or** all four modes—**prefer ungated** |
+
+The user-facing feature×mode matrix in the repo `README.md` is the same mapping
+in prose; keep both in step.
+
+### Gate/body hygiene
+
+- A body conditional whose mode set is a **superset** of the file's gate is always
+  true. Drop it — a reader must be able to trust that a visible `[[ if ]]` can
+  actually be false. Example: inside a file gated
+  `when (modeIs "cli" "cli-library" "http")`, a body `[[ if modeIs "cli" "cli-library" "http" ]]`
+  is noise, and an `[[ else ]]` on it is dead code.
+- A body conditional **disjoint** from the gate is dead code; delete the block.
+- Prefer narrowing the file gate over wrapping the whole body in one conditional.
+- `[[ if ]]` on its own line leaves a blank line and can misalign struct tags.
+  That is fine for Go: bootstrap gofmts the rendered tree (`formatGoFiles`), so
+  templates stay readable. Non-Go files need explicit `[[- ... -]]` trim markers.
+
+### Enforcement
+
+`tools/bootstrap/manifest_test.go` renders all four modes and diffs the file set
+against `testdata/manifest/<mode>.txt`, asserts named per-file mode rules, and
+rejects leftover `[[`/`]]` in output. After an intentional gate change:
+
+```bash
+go -C tools/bootstrap test . -run TestModeManifest -update
+```
+
+Review the manifest diff — it is the mode-enablement change in reviewable form.
 
 ## Render API
 

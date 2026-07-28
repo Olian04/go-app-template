@@ -76,7 +76,48 @@ jobs:
             -mode="$MODE" \
             -module-path="$MODULE_PATH" \
             $MATRIX_NAMES
-          go test ./...
+          # Exercise the Make targets, not just go test: SOURCE_CODE is itself
+          # mode-dependent, so a missing tree only shows up through make.
+          make test
           if [ "$MATRIX_BUILD" = "true" ]; then
-            go build ./...
+            make build
+          fi
+          test -z "$(gofmt -l .)" || { echo "::error::rendered tree is not gofmt-clean"; gofmt -l .; exit 1; }
+
+      - name: Assert per-mode surface
+        env:
+          MODE: ${{ matrix.mode }}
+          MATRIX_NAMES: ${{ matrix.names }}
+          MODULE_PATH: example.com/smoke/${{ matrix.mode }}
+        run: |
+          set -euo pipefail
+          OUT_DIR=$(mktemp -d)
+          trap 'rm -rf "$OUT_DIR"' EXIT
+          rsync -a --exclude '.git' --exclude '.bootstrap-out' ./ "$OUT_DIR/"
+          cd "$OUT_DIR"
+          # shellcheck disable=SC2086
+          ./bootstrap.sh -noninteractive -no-swap \
+            -mode="$MODE" -module-path="$MODULE_PATH" $MATRIX_NAMES
+          cd .bootstrap-out
+
+          # The domain is the constant every mode adapts to.
+          test -f internal/domain/echo/service.go \
+            || { echo "::error::$MODE mode missing the shared domain model"; exit 1; }
+          test -f test/unit/domain/echo/service_test.go \
+            || { echo "::error::$MODE mode missing the domain tests"; exit 1; }
+
+          # Cheap backstop beside the golden manifests in tools/bootstrap:
+          # HTTP-only surface must never leak into a mode with no server.
+          if [ "$MODE" = "http" ]; then
+            grep -rq 'request_id' internal/ || { echo "::error::http mode missing correlation id plumbing"; exit 1; }
+            test -f internal/config/http.go || { echo "::error::http mode missing internal/config/http.go"; exit 1; }
+            grep -rq 'http_requests_in_flight' internal/observability/metrics/ \
+              || { echo "::error::http mode missing default metric set"; exit 1; }
+          else
+            if [ -e internal/config/http.go ] || [ -e internal/app ] || [ -e internal/transport ]; then
+              echo "::error::$MODE mode rendered HTTP-only files"; exit 1
+            fi
+            if [ -d configs ] && grep -rq 'listen_addr' configs/; then
+              echo "::error::$MODE mode leaks listen_addr into config"; exit 1
+            fi
           fi
