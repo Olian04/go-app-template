@@ -13,30 +13,51 @@ Generated Go module (`[[.ModulePath]]`, Go [[.GoVersion]]). Mode: `[[.Mode]]`.
 | `pkg/[[.LibName]]` | Public library surface. |
 [[- end ]]
 [[- if modeIs "http" ]]
-| `internal/app` | Composition root + HTTP wiring. |
+| `internal/app` | Composition root; owns listener timeouts + graceful shutdown. |
 | `internal/domain` | Pure domain behavior. |
-| `internal/transport/http` | HTTP routes. |
+| `internal/transport/http` | HTTP routes + middleware chain. |
 [[- end ]]
 [[- if modeIs "cli" "cli-library" "http" ]]
 | `internal/config` | Config load (YAML → ENV → flags). |
 | `configs/` | Example config files. |
-| `internal/observability/logging` | slog setup helpers. |
+| `internal/observability/logging` | slog setup + request-ID context helpers. |
 [[- end ]]
 [[- if modeIs "http" ]]
-| `internal/observability/metrics` | Prometheus registry. |
-| `internal/transport/metricshttp` | `/metrics` server helper. |
+| `internal/observability/metrics` | Prometheus registry (request, duration, in-flight). |
+| `internal/transport/metricshttp` | `/metrics` handler. |
 [[- end ]]
-| `test/unit/` | Unit tests mirroring `internal/` / `pkg/`. |
+| `test/unit/` | Unit tests mirroring [[ if modeIs "library" ]]`pkg/`[[ else if modeIs "cli-library" ]]`internal/` / `pkg/`[[ else ]]`internal/`[[ end ]]. |
 
 ## Dependency direction
-
-`cmd` → `internal/app` → domain, transports[[- if modeIs "cli" "cli-library" "http" ]], observability[[- end ]][[- if modeIs "cli" "cli-library" "http" ]], config[[- end ]]. Domain avoids HTTP / slog / Prometheus imports.
+[[ if modeIs "library" ]]
+`pkg/[[.LibName]]` is the whole public surface and depends only on the standard library.
+Keep it importable without side effects: no global state, no `init()` work.
+[[ else if modeIs "http" ]]
+`cmd` → `internal/app` → domain, transports, observability, config.
+Domain avoids HTTP / slog / Prometheus imports.
+[[ else ]]
+`cmd` → [[ if modeIs "cli-library" ]]`pkg/[[.LibName]]`, [[ end ]]observability, config.
+Keep business logic out of `cmd`; it should only parse flags and wire dependencies.
+[[ end ]]
 
 [[- if modeIs "cli" "cli-library" "http" ]]
 ## Config
 
 Precedence: YAML → ENV → flags.
 Point `APP_CONFIG_FILE` at a YAML file (omit for built-in defaults). See `configs/`.
+
+Sections in this mode: `labels`[[ if modeIs "http" ]], `http`, `metrics`[[ end ]], `logging`.
+[[- end ]]
+[[- if modeIs "http" ]]
+
+## Observability & hardening
+
+- Every response carries `X-Request-ID`; an inbound one is reused so traces span services.
+  Log with `logging.FromContext(ctx)` to inherit `request_id`.
+- `/metrics` exposes request totals, latency histogram, and an in-flight gauge.
+- Server timeouts, header/body caps, and the shutdown grace period are config
+  (`http:` section). Requests over `max_body_bytes` get `413`; unknown JSON fields get `400`.
+- `SIGINT`/`SIGTERM` drain both listeners before exit.
 [[- end ]]
 
 ## Run locally
@@ -50,7 +71,9 @@ make run
 
 [[- if modeIs "http" ]]
 ```bash
-curl -X POST http://localhost:8080/echo -H 'Content-Type: application/json' -d '{"message":" hello "}'
+# -i to see the X-Request-ID response header
+curl -i -X POST http://localhost:8080/echo -H 'Content-Type: application/json' -d '{"message":" hello "}'
+curl -X POST http://localhost:8080/echo -H 'X-Request-ID: my-trace' -d '{"message":"hi"}'
 curl http://localhost:9090/metrics
 ```
 [[- end ]]

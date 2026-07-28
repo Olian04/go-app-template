@@ -109,6 +109,9 @@ func run(args []string) error {
 	if err := render.Tree(*templatesDir, *outDir, ctx); err != nil {
 		return fmt.Errorf("render tree: %w", err)
 	}
+	if err := formatGoFiles(*outDir); err != nil {
+		return err
+	}
 	fmt.Fprintf(os.Stderr, "bootstrap: rendered into %s\n", *outDir)
 
 	if *noSwap {
