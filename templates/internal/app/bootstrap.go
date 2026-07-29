@@ -33,7 +33,13 @@ func Run(ctx context.Context, cfg config.Config) error {
 		return fmt.Errorf("metrics registry: %w", err)
 	}
 
-	handler := httptransport.Router(echo.NewService(), registry, cfg.HTTP.MaxBodyBytes)
+	handler, err := httptransport.Router(echo.NewService(), registry, httptransport.Options{
+		MaxBodyBytes: cfg.HTTP.MaxBodyBytes,
+		DocsEnabled:  cfg.HTTP.DocsOn(),
+	})
+	if err != nil {
+		return fmt.Errorf("build router: %w", err)
+	}
 
 	servers := []server{{
 		name: "http",
@@ -48,9 +54,11 @@ func Run(ctx context.Context, cfg config.Config) error {
 				return serve(ctx, "metrics", cfg.Metrics.ListenAddr, metricshttp.Handler(registry.Handler()), cfg.HTTP)
 			},
 		})
-		slog.Info("[[.ServiceName]] service started", "http_addr", cfg.HTTP.ListenAddr, "metrics_addr", cfg.Metrics.ListenAddr)
+		slog.Info("[[.ServiceName]] service started",
+			"http_addr", cfg.HTTP.ListenAddr, "metrics_addr", cfg.Metrics.ListenAddr, "docs_enabled", cfg.HTTP.DocsOn())
 	} else {
-		slog.Info("[[.ServiceName]] service started", "http_addr", cfg.HTTP.ListenAddr, "metrics_enabled", false)
+		slog.Info("[[.ServiceName]] service started",
+			"http_addr", cfg.HTTP.ListenAddr, "metrics_enabled", false, "docs_enabled", cfg.HTTP.DocsOn())
 	}
 
 	// Cancelling runCtx stops the siblings when any one listener fails, so a

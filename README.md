@@ -34,6 +34,8 @@ facade. That shows where your own logic goes and what changes when the mode does
 | HTTP transport + composition root (`internal/transport/`, `internal/app/`) | – | – | – | ✓ |
 | Middleware chain: recover, request ID, logging, metrics | – | – | – | ✓ |
 | `X-Request-ID` propagation on requests/responses | – | – | – | ✓ |
+| OpenAPI 3.1 contract (`api/openapi.yaml`, embedded + served) | – | – | – | ✓ |
+| Swagger UI at `/docs`, toggled by `http.docs_enabled` | – | – | – | ✓ |
 | Prometheus registry + `/metrics` listener | – | – | – | ✓ |
 | Request rate/error/duration + in-flight metrics | – | – | – | ✓ |
 | Server timeouts, `MaxHeaderBytes`, `MaxBytesReader` | – | – | – | ✓ |

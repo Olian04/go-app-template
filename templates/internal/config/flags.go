@@ -5,6 +5,7 @@ package config
 type FlagOverrides struct {
 [[ if modeIs "http" ]]
 	HTTPListenAddr    *string
+	HTTPDocsEnabled   *bool
 	MetricsEnabled    *bool
 	MetricsListenAddr *string
 	MetricPrefix      *string
@@ -18,6 +19,10 @@ func applyFlags(cfg *Config, f FlagOverrides) {
 [[ if modeIs "http" ]]
 	if f.HTTPListenAddr != nil {
 		cfg.HTTP.ListenAddr = *f.HTTPListenAddr
+	}
+	if f.HTTPDocsEnabled != nil {
+		v := *f.HTTPDocsEnabled
+		cfg.HTTP.DocsEnabled = &v
 	}
 	if f.MetricsListenAddr != nil {
 		cfg.Metrics.ListenAddr = *f.MetricsListenAddr

@@ -16,6 +16,7 @@ import (
 //
 [[ if modeIs "http" ]]
 //	APP_HTTP_LISTEN_ADDR
+//	APP_HTTP_DOCS_ENABLED
 //	APP_METRICS_ENABLED
 //	APP_METRICS_LISTEN_ADDR
 //	APP_METRICS_METRIC_PREFIX
@@ -31,6 +32,13 @@ func applyEnv(cfg *Config) error {
 [[ if modeIs "http" ]]
 	if v, ok := lookupEnv("APP_HTTP_LISTEN_ADDR"); ok {
 		cfg.HTTP.ListenAddr = v
+	}
+	if v, ok := lookupEnv("APP_HTTP_DOCS_ENABLED"); ok {
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return fmt.Errorf("APP_HTTP_DOCS_ENABLED: %w", err)
+		}
+		cfg.HTTP.DocsEnabled = &b
 	}
 	if v, ok := lookupEnv("APP_METRICS_LISTEN_ADDR"); ok {
 		cfg.Metrics.ListenAddr = v

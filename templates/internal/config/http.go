@@ -21,6 +21,18 @@ type HTTPSection struct {
 	ShutdownTimeout   time.Duration `yaml:"shutdown_timeout,omitempty"`
 	MaxHeaderBytes    int           `yaml:"max_header_bytes,omitempty"`
 	MaxBodyBytes      int64         `yaml:"max_body_bytes,omitempty"`
+
+	// DocsEnabled serves /docs and the OpenAPI spec. Pointer so an explicit
+	// `false` is distinguishable from an omitted field.
+	DocsEnabled *bool `yaml:"docs_enabled,omitempty"`
+}
+
+// DocsOn reports whether the documentation endpoints should be served.
+func (h HTTPSection) DocsOn() bool {
+	if h.DocsEnabled == nil {
+		return DefaultHTTPDocsEnabled
+	}
+	return *h.DocsEnabled
 }
 
 func (h HTTPSection) WithDefaults() HTTPSection {
@@ -47,6 +59,10 @@ func (h HTTPSection) WithDefaults() HTTPSection {
 	}
 	if h.MaxBodyBytes == 0 {
 		h.MaxBodyBytes = DefaultHTTPMaxBodyBytes
+	}
+	if h.DocsEnabled == nil {
+		v := DefaultHTTPDocsEnabled
+		h.DocsEnabled = &v
 	}
 	return h
 }

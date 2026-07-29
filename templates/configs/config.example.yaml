@@ -20,6 +20,9 @@ http:
   shutdown_timeout: '10s'
   max_header_bytes: 1048576
   max_body_bytes: 1048576
+  # Serves /docs, /openapi.yaml and /openapi.json. Disable to keep the API
+  # contract private on an untrusted network.
+  docs_enabled: true
 
 metrics:
   enabled: true

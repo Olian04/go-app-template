@@ -12,6 +12,7 @@ App template — use with repo `README.md`[[ if modeIs "cli" "cli-library" "http
 | `internal/app` | Wire registry + router; own every listener's timeouts and shutdown. |
 | `internal/transport/http` | HTTP adapter over the domain + middleware chain (recover, request ID, logging, metrics). |
 | `internal/transport/metricshttp` | `/metrics` handler (no lifecycle — `internal/app` runs it). |
+| `api` | OpenAPI contract (`openapi.yaml`) embedded via `go:embed`. |
 [[ end ]]
 [[ if modeIs "cli" "cli-library" ]]
 | `cmd/[[ .CliName ]]` | CLI adapter over the domain: args/stdin in, stdout out. |
@@ -76,6 +77,13 @@ which sections exist — do not add an `http` section to a mode with no server.
   return decoder errors to clients — log them and send a fixed message.
 - **Shutdown**: `app.Run` cancels siblings on first failure and waits for every
   listener to drain before returning.
+- **API contract**: `api/openapi.yaml` is hand-maintained and authoritative —
+  update it in the same change as the handler. `openapi_test.go` fails on drift in
+  either direction, and adding a route means adding it to `publicRoutes` there
+  (`net/http`'s `ServeMux` cannot enumerate its own patterns).
+- **Docs endpoints**: `/docs`, `/openapi.yaml`, `/openapi.json`, gated by
+  `http.docs_enabled`. Swagger UI comes from a pinned CDN with SRI hashes; if you
+  change the version, update both hashes or the browser will refuse the assets.
 [[ else ]]
 - **Metrics**: off for this mode.
 [[ end ]]

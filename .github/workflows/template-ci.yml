@@ -113,8 +113,14 @@ jobs:
             test -f internal/config/http.go || { echo "::error::http mode missing internal/config/http.go"; exit 1; }
             grep -rq 'http_requests_in_flight' internal/observability/metrics/ \
               || { echo "::error::http mode missing default metric set"; exit 1; }
+            test -f api/openapi.yaml || { echo "::error::http mode missing the OpenAPI contract"; exit 1; }
+            grep -q 'openapi: 3' api/openapi.yaml || { echo "::error::api/openapi.yaml is not an OpenAPI 3.x document"; exit 1; }
+            # An unpinned CDN script on the docs page would be arbitrary remote JS.
+            # (The served page is asserted in openapi_test.go; this is a cheap backstop.)
+            test "$(grep -c 'sha384-' internal/transport/http/openapi.go)" -ge 2 \
+              || { echo "::error::Swagger UI assets are not pinned with SRI hashes"; exit 1; }
           else
-            if [ -e internal/config/http.go ] || [ -e internal/app ] || [ -e internal/transport ]; then
+            if [ -e internal/config/http.go ] || [ -e internal/app ] || [ -e internal/transport ] || [ -e api ]; then
               echo "::error::$MODE mode rendered HTTP-only files"; exit 1
             fi
             if [ -d configs ] && grep -rq 'listen_addr' configs/; then

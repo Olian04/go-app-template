@@ -16,12 +16,24 @@ import (
 
 func newRouter(t *testing.T) http.Handler {
 	t.Helper()
+	cfg := config.HTTPSection{}.WithDefaults()
+	return newRouterWith(t, httptransport.Options{
+		MaxBodyBytes: cfg.MaxBodyBytes,
+		DocsEnabled:  cfg.DocsOn(),
+	})
+}
+
+func newRouterWith(t *testing.T, opts httptransport.Options) http.Handler {
+	t.Helper()
 	registry, err := metrics.NewRegistry(metrics.WithNamespace("test"))
 	if err != nil {
 		t.Fatalf("registry: %v", err)
 	}
-	cfg := config.HTTPSection{}.WithDefaults()
-	return httptransport.Router(echo.NewService(), registry, cfg.MaxBodyBytes)
+	handler, err := httptransport.Router(echo.NewService(), registry, opts)
+	if err != nil {
+		t.Fatalf("router: %v", err)
+	}
+	return handler
 }
 
 func TestRouterGeneratesRequestID(t *testing.T) {
@@ -64,12 +76,8 @@ func TestRouterReplacesUnusableRequestID(t *testing.T) {
 }
 
 func TestEchoRejectsOversizedBody(t *testing.T) {
-	registry, err := metrics.NewRegistry(metrics.WithNamespace("test"))
-	if err != nil {
-		t.Fatalf("registry: %v", err)
-	}
 	// A 16-byte cap is smaller than the payload below.
-	router := httptransport.Router(echo.NewService(), registry, 16)
+	router := newRouterWith(t, httptransport.Options{MaxBodyBytes: 16})
 
 	body := `{"message":"` + strings.Repeat("A", 512) + `"}`
 	req := httptest.NewRequest(http.MethodPost, "/echo", strings.NewReader(body))

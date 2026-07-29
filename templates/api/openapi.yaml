@@ -1,0 +1,152 @@
+# [[ when (modeIs "http") ]]
+# OpenAPI contract for this service. Hand-maintained and embedded into the
+# binary (see api/api.go), served at /openapi.yaml and /openapi.json.
+#
+# This file is the contract, not a by-product: edit it in the same change that
+# edits a handler. test/unit/transport/http/openapi_test.go fails when the spec
+# documents a route the router does not serve, or omits one it does.
+openapi: 3.1.0
+
+info:
+  title: [[ .ModuleBasename ]]
+  summary: Echo service
+  description: |
+    Demo HTTP surface over the `internal/domain/echo` model. Every mode of this
+    template wraps that same domain; here the adapter is HTTP.
+  version: 0.1.0
+  license:
+    name: MIT
+
+servers:
+  - url: /
+    description: This server
+
+tags:
+  - name: echo
+    description: Domain operations
+  - name: ops
+    description: Liveness and operational endpoints
+
+components:
+  parameters:
+    RequestID:
+      name: X-Request-ID
+      in: header
+      required: false
+      description: |
+        Correlation ID. Reused when supplied and safe to echo (printable ASCII,
+        no whitespace, at most 128 chars); otherwise the service generates one.
+        Always present on the response.
+      schema:
+        type: string
+        maxLength: 128
+        example: 7f3c1a9e5b2d4f8091a6c3e7d5b9f204
+
+  headers:
+    X-Request-ID:
+      description: Correlation ID for this request; safe to log and trace on.
+      required: true
+      schema:
+        type: string
+        example: 7f3c1a9e5b2d4f8091a6c3e7d5b9f204
+
+  schemas:
+    EchoRequest:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message:
+          type: string
+          description: Text to echo. Surrounding whitespace is trimmed.
+          example: '  hello  '
+    EchoResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          description: The message with surrounding whitespace removed.
+          example: hello
+
+  responses:
+    BadRequest:
+      description: |
+        Body was not valid JSON, or carried a field the schema does not define.
+        The detail is logged, not returned, so decoder output cannot echo
+        attacker-controlled input back to the caller.
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/X-Request-ID'
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: invalid request body
+    PayloadTooLarge:
+      description: Body exceeded `http.max_body_bytes`.
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/X-Request-ID'
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: request body too large
+    InternalError:
+      description: Unhandled failure; a panic is recovered and reported as this.
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/X-Request-ID'
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: internal server error
+
+paths:
+  /healthz:
+    get:
+      tags: [ops]
+      operationId: health
+      summary: Liveness probe
+      description: Returns 204 as soon as the server is accepting requests.
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      responses:
+        '204':
+          description: Service is up. No body.
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+
+  /echo:
+    post:
+      tags: [echo]
+      operationId: echo
+      summary: Echo a message
+      description: Trims surrounding whitespace from `message` via the domain model.
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EchoRequest'
+      responses:
+        '200':
+          description: Echoed message.
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EchoResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '500':
+          $ref: '#/components/responses/InternalError'

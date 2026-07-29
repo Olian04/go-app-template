@@ -28,6 +28,9 @@ const (
 	DefaultHTTPShutdownTimeout   = 10 * time.Second
 	DefaultHTTPMaxHeaderBytes    = 1 << 20 // 1 MiB
 	DefaultHTTPMaxBodyBytes      = 1 << 20 // 1 MiB
+	// Docs are on by default so a fresh service is self-describing; disable via
+	// http.docs_enabled where the contract should not be public.
+	DefaultHTTPDocsEnabled = true
 )
 
 const (

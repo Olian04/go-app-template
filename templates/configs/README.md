@@ -6,13 +6,16 @@ Optional layered sources. **Precedence**: **YAML → ENV → flags** (later over
 | Layer | Notes |
 | ----- | ----- |
 | YAML  | File via `Options.Path` / `APP_CONFIG_FILE` at the process entrypoint. Example: `configs/config.example.yaml`. |
-| ENV   | [[ if modeIs "http" ]]`APP_HTTP_LISTEN_ADDR`, `APP_METRICS_*`, [[ end ]]`APP_LOGGING_*`. |
+| ENV   | [[ if modeIs "http" ]]`APP_HTTP_LISTEN_ADDR`, `APP_HTTP_DOCS_ENABLED`, `APP_METRICS_*`, [[ end ]]`APP_LOGGING_*`. |
 | Flags | `FlagOverrides` on `Options.Flags` (nil field = leave unchanged). |
 
 Sections present in this mode: `labels`[[ if modeIs "http" ]], `http`, `metrics`[[ end ]], `logging`.
 [[ if modeIs "http" ]]
 HTTP timeouts, `shutdown_timeout`, `max_header_bytes`, and `max_body_bytes` are YAML-only
 (no ENV key); see `HTTPSection` in `internal/config/http.go` for defaults.
+
+`http.docs_enabled` (or `APP_HTTP_DOCS_ENABLED=false`) removes `/docs`,
+`/openapi.yaml`, and `/openapi.json` without affecting the API routes.
 [[ end ]]
 
 With no layers enabled, `Load` returns validated defaults only.

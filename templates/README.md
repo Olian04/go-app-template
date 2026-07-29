@@ -19,6 +19,7 @@ Generated Go module (`[[.ModulePath]]`, Go [[.GoVersion]]). Mode: `[[.Mode]]`.
 [[- if modeIs "http" ]]
 | `internal/app` | Composition root; owns listener timeouts + graceful shutdown. |
 | `internal/transport/http` | HTTP adapter: request → domain → JSON, plus middleware. |
+| `api/openapi.yaml` | OpenAPI 3.1 contract, embedded and served. |
 [[- end ]]
 [[- if modeIs "cli" "cli-library" "http" ]]
 | `internal/config` | Config load (YAML → ENV → flags). |
@@ -120,6 +121,28 @@ curl -i -X POST http://localhost:8080/echo -H 'Content-Type: application/json' -
 curl -X POST http://localhost:8080/echo -H 'X-Request-ID: my-trace' -d '{"message":"hi"}'
 curl http://localhost:9090/metrics
 ```
+
+Browse the API at <http://localhost:8080/docs>, or fetch the contract directly:
+
+```bash
+curl http://localhost:8080/openapi.yaml
+curl http://localhost:8080/openapi.json
+```
+
+## API contract
+
+`api/openapi.yaml` is the contract, hand-maintained and embedded into the binary.
+Edit it in the same change that edits a handler:
+`test/unit/transport/http/openapi_test.go` fails when the spec documents a route
+that is not served, or omits one that is.
+
+`/docs` loads Swagger UI from a pinned CDN build with subresource-integrity
+hashes — nothing is vendored, so the binary stays small. The spec endpoints need
+no network. For a fully offline UI, embed `swagger-ui-bundle.js` and
+`swagger-ui.css` next to `internal/transport/http` and point the tags there.
+
+Set `http.docs_enabled: false` (or `APP_HTTP_DOCS_ENABLED=false`) to drop `/docs`
+and both spec routes without touching the API.
 [[- end ]]
 
 ## Checks

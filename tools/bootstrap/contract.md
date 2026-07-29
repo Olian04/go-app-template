@@ -89,6 +89,7 @@ On false: skip file. No merge. Prune empty dirs after Tree.
 | Config root + logging + labels + yaml    | `when (modeIs "cli" "cli-library" "http")`                  |
 | Logging correlation-id helpers           | `when (modeIs "cli" "cli-library" "http")`                  |
 | Config `http` section (timeouts, limits) | `when (modeIs "http")`                                      |
+| OpenAPI spec + `api/` embed + docs routes | `when (modeIs "http")`                                     |
 | Metrics config + registry + metricshttp  | `when (modeIs "http")`                                      |
 | Release docker bits                      | body/`[[ if modeIs "http" ]]`                             |
 | Release library bits                     | `when (modeIs "library" "cli-library")`                     |

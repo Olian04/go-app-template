@@ -98,6 +98,23 @@ func TestModeManifestGatingInvariants(t *testing.T) {
 			present: []render.Mode{render.ModeHTTP},
 		},
 		{
+			// An OpenAPI contract only describes an HTTP surface; the CLI and
+			// library adapters have no wire protocol to document.
+			path:    "api/openapi.yaml",
+			reason:  "the OpenAPI contract describes the HTTP surface only",
+			present: []render.Mode{render.ModeHTTP},
+		},
+		{
+			path:    "api/api.go",
+			reason:  "the spec is embedded for the HTTP service only",
+			present: []render.Mode{render.ModeHTTP},
+		},
+		{
+			path:    "internal/transport/http/openapi.go",
+			reason:  "spec and Swagger UI endpoints belong to the HTTP transport",
+			present: []render.Mode{render.ModeHTTP},
+		},
+		{
 			path:    "internal/app/bootstrap.go",
 			reason:  "composition root exists only for the service",
 			present: []render.Mode{render.ModeHTTP},

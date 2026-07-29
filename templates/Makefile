@@ -2,7 +2,7 @@
 
 # Only list trees this mode actually renders: a missing path fails the whole
 # target. `internal/` is unconditional because the domain model ships in every mode.
-SOURCE_CODE ?= ./internal/... ./test/unit/...[[- if modeIs "cli" "cli-library" "http" ]] ./cmd/...[[- end ]][[- if modeIs "library" "cli-library" ]] ./pkg/...[[- end ]]
+SOURCE_CODE ?= ./internal/... ./test/unit/...[[- if modeIs "cli" "cli-library" "http" ]] ./cmd/...[[- end ]][[- if modeIs "library" "cli-library" ]] ./pkg/...[[- end ]][[- if modeIs "http" ]] ./api/...[[- end ]]
 REV := $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
 BUILD_TIME := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 BUILD_OUTPUT_DIR := ./dist
