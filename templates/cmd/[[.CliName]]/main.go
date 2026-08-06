@@ -17,7 +17,11 @@ import (
 
 	"[[.ModulePath]]/cmd/[[.CliName]]/version"
 	"[[.ModulePath]]/internal/config"
+[[- if modeIs "cli" ]]
 	"[[.ModulePath]]/internal/domain/echo"
+[[- else if modeIs "cli-library" ]]
+	"[[.ModulePath]]/pkg/[[.LibName]]"
+[[- end ]]
 	"[[.ModulePath]]/internal/observability/logging"
 )
 
@@ -81,16 +85,21 @@ func runCLI(ctx context.Context, c *cli.Command) error {
 	defer cleanup()
 
 	// This is the CLI's IO adapter: read args or stdin, hand the value to the
-	// same domain the other modes use, write the result to stdout.
+	// product surface, write the result to stdout.
 	message, err := readMessage(c)
 	if err != nil {
 		return err
 	}
 
-	res := echo.NewService().Echo(echo.Request{Message: message})
+[[- if modeIs "cli" ]]
+	out := echo.NewService().Echo(echo.Request{Message: message}).Message
+[[- else ]]
+	// Dogfood the public library facade (same path external consumers use).
+	out := [[.LibName]].Echo(message)
+[[- end ]]
 
-	logging.FromContext(ctx).Info("echoed message", "bytes_in", len(message), "bytes_out", len(res.Message))
-	_, err = fmt.Fprintln(c.Root().Writer, res.Message)
+	logging.FromContext(ctx).Info("echoed message", "bytes_in", len(message), "bytes_out", len(out))
+	_, err = fmt.Fprintln(c.Root().Writer, out)
 	return err
 }
 

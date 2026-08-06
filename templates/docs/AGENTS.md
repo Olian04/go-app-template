@@ -13,10 +13,14 @@ App template — use with repo `README.md`[[ if modeIs "cli" "cli-library" "http
 | `internal/transport/http` | HTTP adapter over the domain + middleware chain (recover, request ID, logging, metrics). |
 | `internal/transport/metricshttp` | `/metrics` handler (no lifecycle — `internal/app` runs it). |
 [[ end ]]
-[[ if modeIs "cli" "cli-library" ]]
+[[ if modeIs "cli" ]]
 | `cmd/[[ .CliName ]]` | CLI adapter over the domain: args/stdin in, stdout out. |
 [[ end ]]
-[[ if modeIs "library" "cli-library" ]]
+[[ if modeIs "cli-library" ]]
+| `cmd/[[ .CliName ]]` | CLI adapter; dogfoods `pkg/[[ .LibName ]]` (no domain bypass). |
+| `pkg/[[ .LibName ]]` | Public API: exported facade delegating to the domain. |
+[[ end ]]
+[[ if modeIs "library" ]]
 | `pkg/[[ .LibName ]]` | Public API: exported facade delegating to the domain. |
 [[ end ]]
 [[ if modeIs "cli" "cli-library" "http" ]]
@@ -40,9 +44,15 @@ keep adapters to translation only.
 [[ else if modeIs "http" ]]
 `cmd` → `internal/app` → domain, transport, observability, aggregated `internal/config`.
 Domain must not import app, transports, observability.
-[[ else ]]
-`cmd` → `internal/domain/echo`[[ if modeIs "cli-library" ]], `pkg/[[ .LibName ]]`[[ end ]], observability, aggregated `internal/config`.
+[[ else if modeIs "cli-library" ]]
+`cmd` → `pkg/[[ .LibName ]]` → `internal/domain/echo`. Dogfood the public facade;
+do not import the domain from `cmd`. Config/logging under `internal/` stay for
+process concerns only.
+[[ else if modeIs "cli" ]]
+`cmd` → `internal/domain/echo`, observability, aggregated `internal/config`.
 There is no `internal/app` in this mode; `cmd` is the composition root.
+[[ else ]]
+Consumers import `pkg/[[ .LibName ]]` only.
 [[ end ]]
 
 [[ if modeIs "cli" "cli-library" "http" ]]

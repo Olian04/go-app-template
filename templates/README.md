@@ -7,16 +7,18 @@ Generated Go module (`[[.ModulePath]]`, Go [[.GoVersion]]). Mode: `[[.Mode]]`.
 | Path | Role |
 | --- | --- |
 | `internal/domain/echo` | Demo domain model — the same in every mode. |
-[[- if modeIs "cli" "cli-library" ]]
+[[- if modeIs "cli" ]]
 | `cmd/[[.CliName]]` | CLI adapter: args/stdin → domain → stdout. |
 [[- end ]]
-[[- if modeIs "http" ]]
-| `cmd/[[.ServiceName]]` | Service entrypoint. |
+[[- if modeIs "cli-library" ]]
+| `cmd/[[.CliName]]` | CLI adapter; dogfoods `pkg/[[.LibName]]`. |
+| `pkg/[[.LibName]]` | Public library facade over the domain. |
 [[- end ]]
-[[- if modeIs "library" "cli-library" ]]
+[[- if modeIs "library" ]]
 | `pkg/[[.LibName]]` | Public library facade over the domain. |
 [[- end ]]
 [[- if modeIs "http" ]]
+| `cmd/[[.ServiceName]]` | Service entrypoint. |
 | `internal/app` | Composition root; owns listener timeouts + graceful shutdown. |
 | `internal/transport/http` | HTTP adapter: request → domain → JSON, plus middleware. |
 [[- end ]]
@@ -41,8 +43,11 @@ domain types. Keep it importable without side effects: no global state, no `init
 [[ else if modeIs "http" ]]
 `cmd` → `internal/app` → domain, transports, observability, config.
 Domain avoids HTTP / slog / Prometheus imports.
-[[ else ]]
-`cmd` → domain[[ if modeIs "cli-library" ]], `pkg/[[.LibName]]`[[ end ]], observability, config.
+[[ else if modeIs "cli-library" ]]
+`cmd` → `pkg/[[.LibName]]` → `internal/domain/echo`. CLI dogfoods the public
+facade; do not bypass `pkg` from `cmd`. Config/logging are process concerns only.
+[[ else if modeIs "cli" ]]
+`cmd` → domain, observability, config.
 There is no `internal/app` in this mode; `cmd` is the composition root, and should
 only parse input and wire dependencies — behaviour belongs in the domain.
 [[ end ]]
